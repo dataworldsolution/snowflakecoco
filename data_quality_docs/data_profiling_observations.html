@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Data Profiling Observations - Country Master Files</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-09-29",
+    "intent": "Data profiling observations and gap analysis for country-master CSV files in __initial_load",
+    "sections": [
+      { "id": "executive-summary", "title": "Executive Summary", "producerNotes": "Overview of all 4 country-master files." },
+      { "id": "region-master", "title": "Region Master Profile", "dataSources": [{ "type": "file", "path": "__initial_load/country-master/region_master.csv" }] },
+      { "id": "currency-master", "title": "Currency Master Profile", "dataSources": [{ "type": "file", "path": "__initial_load/country-master/currency_master.csv" }] },
+      { "id": "country-master", "title": "Country Master Profile", "dataSources": [{ "type": "file", "path": "__initial_load/country-master/country_master.csv" }] },
+      { "id": "tax-master", "title": "Tax Master Profile", "dataSources": [{ "type": "file", "path": "__initial_load/country-master/tax_master.csv" }] },
+      { "id": "cross-file", "title": "Cross-File Relationships", "producerNotes": "ER diagram and FK integrity analysis." },
+      { "id": "gaps", "title": "Identified Gaps", "producerNotes": "Design and data gaps found during profiling." }
+    ]
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+      max-width: 920px; width: 100%; box-sizing: border-box;
+      margin: 0 auto; padding: clamp(16px, 4vw, 24px);
+      color: light-dark(#1f2937, #e5e7eb);
+      line-height: 1.6;
+    }
+    h1 { color: light-dark(#0f172a, #f1f5f9); border-bottom: 3px solid light-dark(#2563eb, #3b82f6); padding-bottom: 8px; }
+    h2 { color: light-dark(#1e40af, #93c5fd); margin-top: 2em; border-bottom: 1px solid light-dark(#d1d5db, #374151); padding-bottom: 4px; }
+    h3 { color: light-dark(#374151, #d1d5db); }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 600; margin-left: 6px; }
+    .badge-obs { background: light-dark(#dbeafe, #1e3a5f); color: light-dark(#1e40af, #93c5fd); }
+    .badge-gap { background: light-dark(#fef3c7, #78350f); color: light-dark(#92400e, #fcd34d); }
+    .badge-ok { background: light-dark(#d1fae5, #064e3b); color: light-dark(#065f46, #6ee7b7); }
+    .table-wrap { overflow-x: auto; margin: 12px 0; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.92em; }
+    th, td { border: 1px solid light-dark(#d1d5db, #374151); padding: 6px 10px; text-align: left; }
+    th { background: light-dark(#f3f4f6, #1f2937); font-weight: 600; }
+    tr:nth-child(even) td { background: light-dark(#f9fafb, #111827); }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 16px 0; }
+    .stat-card { background: light-dark(#f3f4f6, #1f2937); border-radius: 8px; padding: 14px; text-align: center; }
+    .stat-card .num { font-size: 1.8em; font-weight: 700; color: light-dark(#1e40af, #60a5fa); }
+    .stat-card .label { font-size: 0.85em; color: light-dark(#6b7280, #9ca3af); margin-top: 4px; }
+    .obs-item { background: light-dark(#eff6ff, #172554); border-left: 4px solid light-dark(#3b82f6, #60a5fa); padding: 10px 14px; margin: 10px 0; border-radius: 0 6px 6px 0; }
+    .gap-item { background: light-dark(#fffbeb, #451a03); border-left: 4px solid light-dark(#f59e0b, #fbbf24); padding: 10px 14px; margin: 10px 0; border-radius: 0 6px 6px 0; }
+    code { background: light-dark(#e5e7eb, #374151); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+    .mermaid-wrap { overflow-x: auto; margin: 16px 0; }
+    .header-meta { font-size: 0.9em; color: light-dark(#6b7280, #9ca3af); margin-bottom: 24px; }
+    img, svg { max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+
+  <h1>Data Profiling: Observations &amp; Gap Analysis</h1>
+  <div class="header-meta">
+    <strong>Scope:</strong> Country Master Files (<code>__initial_load/country-master/</code>)<br>
+    <strong>Files Profiled:</strong> region_master.csv, currency_master.csv, country_master.csv, tax_master.csv<br>
+    <strong>Date:</strong> September 29, 2026<br>
+    <strong>Analyst:</strong> Cortex Code (Automated Profiling)
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="executive-summary">Executive Summary</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">4</div><div class="label">Files Profiled</div></div>
+    <div class="stat-card"><div class="num">102</div><div class="label">Total Rows</div></div>
+    <div class="stat-card"><div class="num">45</div><div class="label">Total Columns</div></div>
+    <div class="stat-card"><div class="num">0</div><div class="label">Null Values Found</div></div>
+    <div class="stat-card"><div class="num">0</div><div class="label">Duplicate Rows</div></div>
+    <div class="stat-card"><div class="num">12</div><div class="label">Observations</div></div>
+    <div class="stat-card"><div class="num">6</div><div class="label">Gaps Identified</div></div>
+  </div>
+
+  <p>All four country-master reference files are clean with zero nulls, zero duplicates, and fully intact referential integrity. The data follows a consistent SCD Type 2 pattern with <code>effective_start_date</code>, <code>effective_end_date</code>, and <code>is_active</code> columns. Six design/data gaps were identified for consideration.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="region-master">1. Region Master (<code>region_master.csv</code>)</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">5</div><div class="label">Rows</div></div>
+    <div class="stat-card"><div class="num">7</div><div class="label">Columns</div></div>
+    <div class="stat-card"><div class="num">0</div><div class="label">Nulls</div></div>
+    <div class="stat-card"><div class="num">MDM_CORE</div><div class="label">Source System</div></div>
+  </div>
+
+  <h3>Schema Profile</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Column</th><th>Data Type</th><th>Unique</th><th>Nulls</th><th>Sample Values</th></tr></thead>
+      <tbody>
+        <tr><td><code>region_code</code> (PK)</td><td>STRING</td><td>5</td><td>0</td><td>AMER, EMEA, JAPAN, GREATER_CHINA, APAC</td></tr>
+        <tr><td><code>region_name</code></td><td>STRING</td><td>5</td><td>0</td><td>Americas, Europe Middle East Africa, Japan, Greater China, Asia Pacific</td></tr>
+        <tr><td><code>is_active</code></td><td>FLAG (Y/N)</td><td>1</td><td>0</td><td>All Y</td></tr>
+        <tr><td><code>effective_start_date</code></td><td>DATE</td><td>1</td><td>0</td><td>All 2000-01-01</td></tr>
+        <tr><td><code>effective_end_date</code></td><td>DATE</td><td>1</td><td>0</td><td>All 9999-12-31</td></tr>
+        <tr><td><code>created_at</code></td><td>TIMESTAMP</td><td>1</td><td>0</td><td>2026-04-17 12:57:09</td></tr>
+        <tr><td><code>source_system</code></td><td>STRING</td><td>1</td><td>0</td><td>MDM_CORE</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Observations</h3>
+  <div class="obs-item"><span class="badge badge-obs">OBS-R01</span> Small reference/lookup table with 5 geographic regions. <code>region_code</code> is a natural primary key with all values unique.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-R02</span> All records are currently active (<code>is_active=Y</code>) with open-ended date range (9999-12-31). No historical records exist.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-R03</span> Single source system (MDM_CORE) and single <code>created_at</code> timestamp indicate a one-time bulk load.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="currency-master">2. Currency Master (<code>currency_master.csv</code>)</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">27</div><div class="label">Rows</div></div>
+    <div class="stat-card"><div class="num">9</div><div class="label">Columns</div></div>
+    <div class="stat-card"><div class="num">0</div><div class="label">Nulls</div></div>
+    <div class="stat-card"><div class="num">TREASURY_SYS</div><div class="label">Source System</div></div>
+  </div>
+
+  <h3>Schema Profile</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Column</th><th>Data Type</th><th>Unique</th><th>Nulls</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>currency_code</code> (PK)</td><td>STRING</td><td>27</td><td>0</td><td>ISO-style: USD, JPY, GBP, EUR, etc.</td></tr>
+        <tr><td><code>currency_name</code></td><td>STRING</td><td>27</td><td>0</td><td>Full names, all unique</td></tr>
+        <tr><td><code>currency_symbol</code></td><td>STRING</td><td>14</td><td>0</td><td>Not unique: $ shared by 7 currencies, kr by 3</td></tr>
+        <tr><td><code>minor_unit</code></td><td>INTEGER</td><td>2</td><td>0</td><td>0 (JPY, KRW) or 2 (all others)</td></tr>
+        <tr><td><code>is_active</code></td><td>FLAG</td><td>1</td><td>0</td><td>All Y</td></tr>
+        <tr><td><code>effective_start_date</code></td><td>DATE</td><td>1</td><td>0</td><td>All 2000-01-01</td></tr>
+        <tr><td><code>effective_end_date</code></td><td>DATE</td><td>1</td><td>0</td><td>All 9999-12-31</td></tr>
+        <tr><td><code>created_at</code></td><td>TIMESTAMP</td><td>1</td><td>0</td><td>2026-04-17</td></tr>
+        <tr><td><code>source_system</code></td><td>STRING</td><td>1</td><td>0</td><td>TREASURY_SYS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Observations</h3>
+  <div class="obs-item"><span class="badge badge-obs">OBS-C01</span> <code>currency_code</code> is the primary key (27 unique values for 27 rows). <code>currency_name</code> is also fully unique and could serve as an alternate key.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-C02</span> <code>currency_symbol</code> is <strong>not unique</strong> (14 distinct values for 27 currencies). The <code>$</code> symbol is shared by USD, CAD, NZD, AUD, HKD, TWD, MXN, SGD. The <code>kr</code> symbol is shared by SEK, NOK, DKK. Not suitable as a lookup key.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-C03</span> <code>minor_unit = 0</code> for JPY and KRW only (no decimal places). All other currencies use 2 decimal places. This is important for rounding logic in financial calculations.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="country-master">3. Country Master (<code>country_master.csv</code>)</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">35</div><div class="label">Rows</div></div>
+    <div class="stat-card"><div class="num">20</div><div class="label">Columns</div></div>
+    <div class="stat-card"><div class="num">0</div><div class="label">Nulls</div></div>
+    <div class="stat-card"><div class="num">MDM_CORE</div><div class="label">Source System</div></div>
+  </div>
+
+  <h3>Schema Profile</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Column</th><th>Data Type</th><th>Unique</th><th>Nulls</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>country_code</code> (PK)</td><td>STRING</td><td>35</td><td>0</td><td>2-letter codes: US, JP, UK, DE...</td></tr>
+        <tr><td><code>country_name</code></td><td>STRING</td><td>35</td><td>0</td><td>Full names, all unique</td></tr>
+        <tr><td><code>iso_alpha3</code></td><td>STRING</td><td>35</td><td>0</td><td>3-letter ISO: USA, JPN, GBR... (alternate key)</td></tr>
+        <tr><td><code>region_code</code> (FK)</td><td>STRING</td><td>5</td><td>0</td><td>AMER(4), EMEA(15), JAPAN(1), GREATER_CHINA(3), APAC(8)</td></tr>
+        <tr><td><code>apple_fiscal_segment</code></td><td>STRING</td><td>5</td><td>0</td><td>Americas, Europe, Japan, Greater China, Rest of Asia Pacific</td></tr>
+        <tr><td><code>currency_code</code> (FK)</td><td>STRING</td><td>20</td><td>0</td><td>EUR shared by 8 countries</td></tr>
+        <tr><td><code>tax_code</code> (FK)</td><td>STRING</td><td>35</td><td>0</td><td>1:1 with country</td></tr>
+        <tr><td><code>primary_language</code></td><td>STRING</td><td>19</td><td>0</td><td>English(7), German(3), Chinese(3)...</td></tr>
+        <tr><td><code>timezone</code></td><td>STRING</td><td>35</td><td>0</td><td>IANA format</td></tr>
+        <tr><td><code>ecommerce_supported</code></td><td>FLAG</td><td>1</td><td>0</td><td>All Y</td></tr>
+        <tr><td><code>retail_store_supported</code></td><td>FLAG</td><td>2</td><td>0</td><td>Y(24), N(11)</td></tr>
+        <tr><td><code>market_tier</code></td><td>STRING</td><td>2</td><td>0</td><td>Tier1(14), Tier2(21)</td></tr>
+        <tr><td><code>population_millions</code></td><td>INTEGER</td><td>33</td><td>0</td><td>Range: 5 to 1,428</td></tr>
+        <tr><td><code>gdp_usd_billions</code></td><td>INTEGER</td><td>34</td><td>0</td><td>Range: 249 to 27,360</td></tr>
+        <tr><td><code>gdpr_applicable</code></td><td>FLAG</td><td>2</td><td>0</td><td>Y(17), N(18)</td></tr>
+        <tr><td><code>is_active</code></td><td>FLAG</td><td>1</td><td>0</td><td>All Y</td></tr>
+        <tr><td><code>effective_start_date</code></td><td>DATE</td><td>13</td><td>0</td><td>1997-11-10 to 2014-05-06</td></tr>
+        <tr><td><code>effective_end_date</code></td><td>DATE</td><td>1</td><td>0</td><td>All 9999-12-31</td></tr>
+        <tr><td><code>created_at</code></td><td>TIMESTAMP</td><td>1</td><td>0</td><td>2026-04-17</td></tr>
+        <tr><td><code>source_system</code></td><td>STRING</td><td>1</td><td>0</td><td>MDM_CORE</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Distribution Analysis</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Region</th><th>Country Count</th><th>% of Total</th></tr></thead>
+      <tbody>
+        <tr><td>EMEA</td><td>15</td><td>42.9%</td></tr>
+        <tr><td>APAC</td><td>8</td><td>22.9%</td></tr>
+        <tr><td>AMER</td><td>4</td><td>11.4%</td></tr>
+        <tr><td>GREATER_CHINA</td><td>3</td><td>8.6%</td></tr>
+        <tr><td>JAPAN</td><td>1</td><td>2.9%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Observations</h3>
+  <div class="obs-item"><span class="badge badge-obs">OBS-M01</span> <code>country_code</code> is the primary key. <code>iso_alpha3</code> is also fully unique and serves as an alternate key.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-M02</span> Three foreign key relationships are present: <code>region_code</code> to region_master, <code>currency_code</code> to currency_master, <code>tax_code</code> to tax_master. All FK values resolve to valid parent records.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-M03</span> EUR currency is shared by 8 countries (NL, BE, FI, IE, AT, IT, FR, DE, ES). 20 distinct currencies serve 35 countries.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-M04</span> All 35 countries support ecommerce. 11 countries lack retail store support (BE, NO, DK, FI, NZ, PL, SA, MY, IL, ZA, TH).</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-M05</span> Market tier distribution: Tier2 dominates at 60% (21 countries) vs Tier1 at 40% (14 countries).</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-M06</span> GDPR applicability aligns with EMEA region membership (17 countries = Y). Two EMEA countries (TR, ZA) are marked N.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-M07</span> <code>effective_start_date</code> spans 1997 (US, earliest market entry) to 2014 (Thailand, latest). This reflects staggered market launches over 17 years.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="tax-master">4. Tax Master (<code>tax_master.csv</code>)</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">35</div><div class="label">Rows</div></div>
+    <div class="stat-card"><div class="num">9</div><div class="label">Columns</div></div>
+    <div class="stat-card"><div class="num">0</div><div class="label">Nulls</div></div>
+    <div class="stat-card"><div class="num">TAX_ENGINE</div><div class="label">Source System</div></div>
+  </div>
+
+  <h3>Schema Profile</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Column</th><th>Data Type</th><th>Unique</th><th>Nulls</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>tax_code</code> (PK)</td><td>STRING</td><td>35</td><td>0</td><td>Pattern: {CC}_{TYPE}_{QUALIFIER}</td></tr>
+        <tr><td><code>tax_type</code></td><td>STRING</td><td>7</td><td>0</td><td>VAT(21), GST(5), SALES_TAX(1), IVA(1), ICMS(1), SST(1), NONE(1)</td></tr>
+        <tr><td><code>tax_rate</code></td><td>FLOAT</td><td>17</td><td>0</td><td>Range: 0.0 (HK) to 0.255 (FI)</td></tr>
+        <tr><td><code>tax_inclusive_flag</code></td><td>FLAG</td><td>2</td><td>0</td><td>Y(33), N(2: US, HK)</td></tr>
+        <tr><td><code>effective_start_date</code></td><td>DATE</td><td>1</td><td>0</td><td>All 2020-01-01</td></tr>
+        <tr><td><code>effective_end_date</code></td><td>DATE</td><td>1</td><td>0</td><td>All 9999-12-31</td></tr>
+        <tr><td><code>is_active</code></td><td>FLAG</td><td>1</td><td>0</td><td>All Y</td></tr>
+        <tr><td><code>created_at</code></td><td>TIMESTAMP</td><td>1</td><td>0</td><td>2026-04-17</td></tr>
+        <tr><td><code>source_system</code></td><td>STRING</td><td>1</td><td>0</td><td>TAX_ENGINE</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Tax Rate Distribution</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Rate Range</th><th>Countries</th></tr></thead>
+      <tbody>
+        <tr><td>25 - 25.5%</td><td>SE, NO, DK (25%), FI (25.5%)</td></tr>
+        <tr><td>20 - 23%</td><td>UK, FR, AT, TR (20%), NL, BE, ES (21%), IT (22%), IE, PL (23%)</td></tr>
+        <tr><td>15 - 19%</td><td>DE (19%), IN (18%), BR, IL (17%), MX (16%), SA, ZA, NZ (15%)</td></tr>
+        <tr><td>5 - 10%</td><td>CN, JP, AU, KR, MY (10%), SG (9%), CH (8.1%), US, TH (7%), CA, TW, AE (5%)</td></tr>
+        <tr><td>0%</td><td>HK (tax-free)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Observations</h3>
+  <div class="obs-item"><span class="badge badge-obs">OBS-T01</span> <code>tax_code</code> is the primary key with a 1:1 mapping to <code>country_master</code>. Each country has exactly one tax code.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-T02</span> VAT is the dominant tax type (21 of 35 = 60%). GST is second (5 countries). Remaining types (SALES_TAX, IVA, ICMS, SST, NONE) have 1 country each.</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-T03</span> Only US and HK use tax-exclusive pricing (<code>tax_inclusive_flag=N</code>). HK is the only jurisdiction with zero tax (<code>tax_rate=0.0</code>, <code>tax_type=NONE</code>).</div>
+  <div class="obs-item"><span class="badge badge-obs">OBS-T04</span> All 35 records share the same effective period (2020-01-01 to 9999-12-31). No historical rate versioning is present in the current dataset.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="cross-file">5. Cross-File Relationship Map</h2>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+erDiagram
+    REGION_MASTER {
+        string region_code PK
+        string region_name
+        string is_active
+        date effective_start_date
+        date effective_end_date
+    }
+    CURRENCY_MASTER {
+        string currency_code PK
+        string currency_name
+        string currency_symbol
+        int minor_unit
+        string is_active
+    }
+    TAX_MASTER {
+        string tax_code PK
+        string tax_type
+        float tax_rate
+        string tax_inclusive_flag
+        string is_active
+    }
+    COUNTRY_MASTER {
+        string country_code PK
+        string country_name
+        string iso_alpha3
+        string region_code FK
+        string currency_code FK
+        string tax_code FK
+        string market_tier
+        string is_active
+    }
+    REGION_MASTER ||--o{ COUNTRY_MASTER : "region_code"
+    CURRENCY_MASTER ||--o{ COUNTRY_MASTER : "currency_code"
+    TAX_MASTER ||--|| COUNTRY_MASTER : "tax_code"
+    </pre>
+  </div>
+
+  <h3>Referential Integrity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Relationship</th><th>Cardinality</th><th>Orphan Records</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>country_master.region_code &rarr; region_master.region_code</td><td>N:1 (35 &rarr; 5)</td><td>0</td><td><span class="badge badge-ok">PASS</span></td></tr>
+        <tr><td>country_master.currency_code &rarr; currency_master.currency_code</td><td>N:1 (35 &rarr; 20 used of 27)</td><td>0</td><td><span class="badge badge-ok">PASS</span></td></tr>
+        <tr><td>country_master.tax_code &rarr; tax_master.tax_code</td><td>1:1 (35 &rarr; 35)</td><td>0</td><td><span class="badge badge-ok">PASS</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="gaps">6. Identified Gaps</h2>
+
+  <div class="gap-item"><span class="badge badge-gap">GAP-01</span> <strong>No historical records / SCD versioning.</strong> All files use SCD Type 2 date columns (<code>effective_start_date</code>, <code>effective_end_date</code>, <code>is_active</code>), but no expired or historical rows exist. If tax rates or country attributes change, there is no mechanism to track the previous state.</div>
+
+  <div class="gap-item"><span class="badge badge-gap">GAP-02</span> <strong>No <code>updated_at</code> column.</strong> All files have <code>created_at</code> but lack an <code>updated_at</code> or <code>last_modified_at</code> timestamp. This makes it impossible to determine when a record was last changed without comparing snapshots.</div>
+
+  <div class="gap-item"><span class="badge badge-gap">GAP-03</span> <strong>Unused currencies in currency_master.</strong> 27 currencies exist but only 20 are referenced by the 35 countries (EUR is shared by 8). The 7 unreferenced currencies represent either future provisioning or orphan data. Verify if all 27 are intentional.</div>
+
+  <div class="gap-item"><span class="badge badge-gap">GAP-04</span> <strong>UK country code is non-standard.</strong> <code>country_code = 'UK'</code> is used instead of the ISO 3166-1 alpha-2 standard <code>'GB'</code>. While <code>iso_alpha3 = 'GBR'</code> is correct, the 2-letter code deviates from the ISO standard. This may cause integration issues with systems that expect ISO-compliant codes.</div>
+
+  <div class="gap-item"><span class="badge badge-gap">GAP-05</span> <strong>No exchange rate data.</strong> The <code>currency_master</code> table contains static currency metadata but no exchange rates. Financial calculations that span currencies will need a separate FX rate source.</div>
+
+  <div class="gap-item"><span class="badge badge-gap">GAP-06</span> <strong>Single tax code per country.</strong> The 1:1 mapping between country and tax code does not accommodate countries with multiple tax regimes (e.g., US state-level sales tax, Canada provincial HST/PST, India state-level GST). The current model assumes a single national rate per country.</div>
+
+  <script src="/libs/mermaid@10.9.6/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: true, securityLevel: 'strict', theme: 'default' });
+  </script>
+
+</body>
+</html>

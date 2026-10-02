@@ -1,0 +1,2 @@
+# Do not check in CSV data files - they are for initial load only
+*.csv

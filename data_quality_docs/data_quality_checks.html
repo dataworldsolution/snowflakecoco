@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Data Quality Check Framework - Country Master Files</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-09-29",
+    "intent": "Data quality check rules and thresholds for country-master tables, derived from profiling analysis",
+    "sections": [
+      { "id": "overview", "title": "Quality Framework Overview" },
+      { "id": "completeness", "title": "Completeness Checks" },
+      { "id": "uniqueness", "title": "Uniqueness Checks" },
+      { "id": "referential-integrity", "title": "Referential Integrity Checks" },
+      { "id": "validity", "title": "Validity & Format Checks" },
+      { "id": "consistency", "title": "Consistency Checks" },
+      { "id": "business-rules", "title": "Business Rule Checks" }
+    ]
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+      max-width: 920px; width: 100%; box-sizing: border-box;
+      margin: 0 auto; padding: clamp(16px, 4vw, 24px);
+      color: light-dark(#1f2937, #e5e7eb);
+      line-height: 1.6;
+    }
+    h1 { color: light-dark(#0f172a, #f1f5f9); border-bottom: 3px solid light-dark(#059669, #34d399); padding-bottom: 8px; }
+    h2 { color: light-dark(#047857, #6ee7b7); margin-top: 2em; border-bottom: 1px solid light-dark(#d1d5db, #374151); padding-bottom: 4px; }
+    h3 { color: light-dark(#374151, #d1d5db); }
+    .table-wrap { overflow-x: auto; margin: 12px 0; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+    th, td { border: 1px solid light-dark(#d1d5db, #374151); padding: 6px 10px; text-align: left; vertical-align: top; }
+    th { background: light-dark(#f3f4f6, #1f2937); font-weight: 600; }
+    tr:nth-child(even) td { background: light-dark(#f9fafb, #111827); }
+    code { background: light-dark(#e5e7eb, #374151); padding: 1px 5px; border-radius: 3px; font-size: 0.88em; }
+    .severity-critical { color: light-dark(#dc2626, #f87171); font-weight: 700; }
+    .severity-high { color: light-dark(#ea580c, #fb923c); font-weight: 700; }
+    .severity-medium { color: light-dark(#ca8a04, #facc15); font-weight: 600; }
+    .severity-low { color: light-dark(#2563eb, #60a5fa); font-weight: 600; }
+    .header-meta { font-size: 0.9em; color: light-dark(#6b7280, #9ca3af); margin-bottom: 24px; }
+    .dimension-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; }
+    .dim-complete { background: light-dark(#dbeafe, #1e3a5f); color: light-dark(#1e40af, #93c5fd); }
+    .dim-unique { background: light-dark(#ede9fe, #3b0764); color: light-dark(#6d28d9, #c4b5fd); }
+    .dim-ri { background: light-dark(#fce7f3, #831843); color: light-dark(#be185d, #f9a8d4); }
+    .dim-valid { background: light-dark(#d1fae5, #064e3b); color: light-dark(#065f46, #6ee7b7); }
+    .dim-consist { background: light-dark(#fef3c7, #78350f); color: light-dark(#92400e, #fcd34d); }
+    .dim-business { background: light-dark(#fee2e2, #7f1d1d); color: light-dark(#991b1b, #fca5a5); }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
+    .stat-card { background: light-dark(#f3f4f6, #1f2937); border-radius: 8px; padding: 14px; text-align: center; }
+    .stat-card .num { font-size: 1.6em; font-weight: 700; color: light-dark(#047857, #34d399); }
+    .stat-card .label { font-size: 0.82em; color: light-dark(#6b7280, #9ca3af); margin-top: 4px; }
+    img, svg { max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+
+  <h1>Data Quality Check Framework</h1>
+  <div class="header-meta">
+    <strong>Scope:</strong> Country Master Tables (<code>region_master</code>, <code>currency_master</code>, <code>country_master</code>, <code>tax_master</code>)<br>
+    <strong>Derived From:</strong> Data Profiling Analysis (September 2026)<br>
+    <strong>Purpose:</strong> Reusable quality checks for post-load validation, ongoing monitoring, and CI/CD pipelines<br>
+    <strong>Date:</strong> September 29, 2026
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="overview">Quality Framework Overview</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">32</div><div class="label">Total Checks</div></div>
+    <div class="stat-card"><div class="num">6</div><div class="label">Quality Dimensions</div></div>
+    <div class="stat-card"><div class="num">4</div><div class="label">Tables Covered</div></div>
+    <div class="stat-card"><div class="num">4</div><div class="label">Severity Levels</div></div>
+  </div>
+
+  <h3>Quality Dimensions</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Dimension</th><th>Description</th><th>Check Count</th></tr></thead>
+      <tbody>
+        <tr><td><span class="dimension-badge dim-complete">COMPLETENESS</span></td><td>No null/missing values in required fields</td><td>6</td></tr>
+        <tr><td><span class="dimension-badge dim-unique">UNIQUENESS</span></td><td>Primary keys and alternate keys have no duplicates</td><td>6</td></tr>
+        <tr><td><span class="dimension-badge dim-ri">REFERENTIAL INTEGRITY</span></td><td>Foreign keys resolve to valid parent records</td><td>5</td></tr>
+        <tr><td><span class="dimension-badge dim-valid">VALIDITY</span></td><td>Values conform to expected formats, ranges, and domains</td><td>7</td></tr>
+        <tr><td><span class="dimension-badge dim-consist">CONSISTENCY</span></td><td>Cross-column and cross-table logical consistency</td><td>4</td></tr>
+        <tr><td><span class="dimension-badge dim-business">BUSINESS RULES</span></td><td>Domain-specific rules and thresholds</td><td>4</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Severity Levels</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Severity</th><th>Action</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><span class="severity-critical">CRITICAL</span></td><td>Block load / halt pipeline</td><td>Data integrity breach that corrupts downstream systems</td></tr>
+        <tr><td><span class="severity-high">HIGH</span></td><td>Alert + manual review</td><td>Significant quality issue requiring prompt attention</td></tr>
+        <tr><td><span class="severity-medium">MEDIUM</span></td><td>Log + periodic review</td><td>Quality deviation that may impact analytics</td></tr>
+        <tr><td><span class="severity-low">LOW</span></td><td>Log for audit</td><td>Minor issue or informational anomaly</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="completeness">1. Completeness Checks</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Table</th><th>Check</th><th>Rule</th><th>Severity</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>DQ-C01</td><td><code>region_master</code></td><td>No nulls in any column</td><td>All 7 columns must be NOT NULL</td><td><span class="severity-critical">CRITICAL</span></td><td>0 null values</td></tr>
+        <tr><td>DQ-C02</td><td><code>currency_master</code></td><td>No nulls in any column</td><td>All 9 columns must be NOT NULL</td><td><span class="severity-critical">CRITICAL</span></td><td>0 null values</td></tr>
+        <tr><td>DQ-C03</td><td><code>country_master</code></td><td>No nulls in any column</td><td>All 20 columns must be NOT NULL</td><td><span class="severity-critical">CRITICAL</span></td><td>0 null values</td></tr>
+        <tr><td>DQ-C04</td><td><code>tax_master</code></td><td>No nulls in any column</td><td>All 9 columns must be NOT NULL</td><td><span class="severity-critical">CRITICAL</span></td><td>0 null values</td></tr>
+        <tr><td>DQ-C05</td><td><code>country_master</code></td><td>Row count threshold</td><td>Must have at least 35 rows (current baseline)</td><td><span class="severity-high">HIGH</span></td><td>&ge; 35 rows</td></tr>
+        <tr><td>DQ-C06</td><td><code>region_master</code></td><td>Row count threshold</td><td>Must have at least 5 rows (current baseline)</td><td><span class="severity-high">HIGH</span></td><td>&ge; 5 rows</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="uniqueness">2. Uniqueness Checks</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Table</th><th>Check</th><th>Rule</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr><td>DQ-U01</td><td><code>region_master</code></td><td>PK uniqueness</td><td><code>region_code</code> must have zero duplicates</td><td><span class="severity-critical">CRITICAL</span></td></tr>
+        <tr><td>DQ-U02</td><td><code>currency_master</code></td><td>PK uniqueness</td><td><code>currency_code</code> must have zero duplicates</td><td><span class="severity-critical">CRITICAL</span></td></tr>
+        <tr><td>DQ-U03</td><td><code>country_master</code></td><td>PK uniqueness</td><td><code>country_code</code> must have zero duplicates</td><td><span class="severity-critical">CRITICAL</span></td></tr>
+        <tr><td>DQ-U04</td><td><code>country_master</code></td><td>Alternate key uniqueness</td><td><code>iso_alpha3</code> must have zero duplicates</td><td><span class="severity-high">HIGH</span></td></tr>
+        <tr><td>DQ-U05</td><td><code>tax_master</code></td><td>PK uniqueness</td><td><code>tax_code</code> must have zero duplicates</td><td><span class="severity-critical">CRITICAL</span></td></tr>
+        <tr><td>DQ-U06</td><td><code>country_master</code></td><td>Full row uniqueness</td><td>No fully duplicate rows across all 20 columns</td><td><span class="severity-critical">CRITICAL</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="referential-integrity">3. Referential Integrity Checks</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Child Table</th><th>FK Column</th><th>Parent Table</th><th>PK Column</th><th>Severity</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>DQ-RI01</td><td><code>country_master</code></td><td><code>region_code</code></td><td><code>region_master</code></td><td><code>region_code</code></td><td><span class="severity-critical">CRITICAL</span></td><td>0 orphans</td></tr>
+        <tr><td>DQ-RI02</td><td><code>country_master</code></td><td><code>currency_code</code></td><td><code>currency_master</code></td><td><code>currency_code</code></td><td><span class="severity-critical">CRITICAL</span></td><td>0 orphans</td></tr>
+        <tr><td>DQ-RI03</td><td><code>country_master</code></td><td><code>tax_code</code></td><td><code>tax_master</code></td><td><code>tax_code</code></td><td><span class="severity-critical">CRITICAL</span></td><td>0 orphans</td></tr>
+        <tr><td>DQ-RI04</td><td><code>currency_master</code></td><td><code>currency_code</code></td><td><code>country_master</code></td><td><code>currency_code</code></td><td><span class="severity-low">LOW</span></td><td>Log unused currencies (currently 7 of 27 unreferenced)</td></tr>
+        <tr><td>DQ-RI05</td><td><code>tax_master</code></td><td><code>tax_code</code></td><td><code>country_master</code></td><td><code>tax_code</code></td><td><span class="severity-medium">MEDIUM</span></td><td>All tax codes should be referenced by at least one country</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="validity">4. Validity &amp; Format Checks</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Table</th><th>Column</th><th>Rule</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr><td>DQ-V01</td><td><code>country_master</code></td><td><code>country_code</code></td><td>Must be exactly 2 uppercase letters (<code>[A-Z]{2}</code>)</td><td><span class="severity-high">HIGH</span></td></tr>
+        <tr><td>DQ-V02</td><td><code>country_master</code></td><td><code>iso_alpha3</code></td><td>Must be exactly 3 uppercase letters (<code>[A-Z]{3}</code>)</td><td><span class="severity-high">HIGH</span></td></tr>
+        <tr><td>DQ-V03</td><td><code>tax_master</code></td><td><code>tax_rate</code></td><td>Must be between 0.0 and 1.0 (percentage as decimal)</td><td><span class="severity-critical">CRITICAL</span></td></tr>
+        <tr><td>DQ-V04</td><td>All tables</td><td><code>is_active</code></td><td>Must be exactly <code>'Y'</code> or <code>'N'</code></td><td><span class="severity-high">HIGH</span></td></tr>
+        <tr><td>DQ-V05</td><td>All tables</td><td><code>effective_end_date</code></td><td>Must be &ge; <code>effective_start_date</code></td><td><span class="severity-critical">CRITICAL</span></td></tr>
+        <tr><td>DQ-V06</td><td><code>currency_master</code></td><td><code>minor_unit</code></td><td>Must be 0, 2, or 3 (valid ISO 4217 minor units)</td><td><span class="severity-medium">MEDIUM</span></td></tr>
+        <tr><td>DQ-V07</td><td><code>tax_master</code></td><td><code>tax_inclusive_flag</code></td><td>Must be exactly <code>'Y'</code> or <code>'N'</code></td><td><span class="severity-high">HIGH</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="consistency">5. Consistency Checks</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Table(s)</th><th>Check</th><th>Rule</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr><td>DQ-CS01</td><td><code>tax_master</code></td><td>HK tax consistency</td><td>If <code>tax_type = 'NONE'</code> then <code>tax_rate</code> must = 0.0</td><td><span class="severity-high">HIGH</span></td></tr>
+        <tr><td>DQ-CS02</td><td><code>tax_master</code></td><td>Tax-exclusive consistency</td><td>If <code>tax_inclusive_flag = 'N'</code> then <code>tax_type</code> should be <code>SALES_TAX</code> or <code>NONE</code></td><td><span class="severity-medium">MEDIUM</span></td></tr>
+        <tr><td>DQ-CS03</td><td><code>country_master</code></td><td>Active record date consistency</td><td>If <code>is_active = 'Y'</code> then <code>effective_end_date</code> must be &ge; CURRENT_DATE</td><td><span class="severity-high">HIGH</span></td></tr>
+        <tr><td>DQ-CS04</td><td><code>country_master</code></td><td>GDPR &harr; Region consistency</td><td>All EMEA countries (except TR, ZA which are confirmed N) should have <code>gdpr_applicable = 'Y'</code></td><td><span class="severity-medium">MEDIUM</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="business-rules">6. Business Rule Checks</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Table</th><th>Check</th><th>Rule</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr><td>DQ-BR01</td><td><code>country_master</code></td><td>Market tier values</td><td><code>market_tier</code> must be in (<code>'Tier1'</code>, <code>'Tier2'</code>)</td><td><span class="severity-high">HIGH</span></td></tr>
+        <tr><td>DQ-BR02</td><td><code>tax_master</code></td><td>Tax type domain</td><td><code>tax_type</code> must be in (<code>'VAT'</code>, <code>'GST'</code>, <code>'SALES_TAX'</code>, <code>'IVA'</code>, <code>'ICMS'</code>, <code>'SST'</code>, <code>'NONE'</code>)</td><td><span class="severity-high">HIGH</span></td></tr>
+        <tr><td>DQ-BR03</td><td><code>country_master</code></td><td>Population sanity</td><td><code>population_millions</code> must be &gt; 0 and &lt; 2000</td><td><span class="severity-medium">MEDIUM</span></td></tr>
+        <tr><td>DQ-BR04</td><td><code>country_master</code></td><td>GDP sanity</td><td><code>gdp_usd_billions</code> must be &gt; 0 and &lt; 50000</td><td><span class="severity-medium">MEDIUM</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>
